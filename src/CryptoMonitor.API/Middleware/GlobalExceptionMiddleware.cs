@@ -7,7 +7,8 @@ namespace CryptoMonitor.API.Middleware;
 internal sealed class GlobalExceptionMiddleware(
     RequestDelegate next,
     IProblemDetailsService problemDetailsService,
-    ILogger<GlobalExceptionMiddleware> logger
+    ILogger<GlobalExceptionMiddleware> logger,
+    IHostEnvironment environment
 )
 {
     public async Task InvokeAsync(HttpContext context)
@@ -49,11 +50,14 @@ internal sealed class GlobalExceptionMiddleware(
             return;
         }
 
-        var (statusCode, title) = exception switch
+        var (statusCode, title, detail) = exception switch
         {
-            AssetNotFoundException => (StatusCodes.Status404NotFound, "Asset not found"),
-            HttpRequestException => (StatusCodes.Status502BadGateway, "External service unavailable"),
-            _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
+            AssetNotFoundException => (StatusCodes.Status404NotFound, "Asset not found", exception.Message),
+            HttpRequestException => (StatusCodes.Status502BadGateway, "External service unavailable", "The upstream price provider is unavailable."),
+            _ => (
+                StatusCodes.Status500InternalServerError,
+                "An unexpected error occurred",
+                environment.IsDevelopment() ? exception.Message : "An internal error occurred.")
         };
 
         context.Response.StatusCode = statusCode;
@@ -65,7 +69,7 @@ internal sealed class GlobalExceptionMiddleware(
             {
                 Status = statusCode,
                 Title = title,
-                Detail = exception.Message,
+                Detail = detail,
                 Instance = context.Request.Path
             },
             Exception = exception

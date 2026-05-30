@@ -24,8 +24,6 @@ public static class AssetsEndpoints
         [FromQuery, Description("Items per page. Max 200.")] int pageSize = 50
     )
     {
-        page = page <= 0 ? 1 : page;
-        pageSize = pageSize <= 0 ? 50 : Math.Min(pageSize, 200);
         var assets = await mediator.Send(new GetAssetsQuery(page, pageSize), cancellationToken);
         return TypedResults.Ok(assets);
     }
@@ -50,8 +48,6 @@ public static class AssetsEndpoints
         [FromQuery, Description("Items per page. Max 500.")] int pageSize = 100
     )
     {
-        page = page <= 0 ? 1 : page;
-        pageSize = pageSize <= 0 ? 100 : Math.Min(pageSize, 500);
         var history = await mediator.Send(new GetAssetHistoryQuery(id, from, to, page, pageSize), cancellationToken);
         return TypedResults.Ok(history);
     }

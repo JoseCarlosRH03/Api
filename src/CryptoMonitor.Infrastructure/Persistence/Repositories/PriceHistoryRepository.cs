@@ -27,7 +27,13 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
             .Where(p => p.AssetId == assetId);
 
         if (from.HasValue) query = query.Where(p => p.RecordedAt >= from.Value);
-        if (to.HasValue)   query = query.Where(p => p.RecordedAt <= to.Value);
+
+        if (to.HasValue)
+        {
+            query = to.Value.TimeOfDay == TimeSpan.Zero
+                ? query.Where(p => p.RecordedAt < to.Value.Date.AddDays(1))
+                : query.Where(p => p.RecordedAt <= to.Value);
+        }
 
         var totalCount = await query.CountAsync(cancellationToken).ConfigureAwait(false);
 
