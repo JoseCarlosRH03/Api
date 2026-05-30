@@ -6,7 +6,7 @@ public record PriceHistoryDto(
     int Id,
     string AssetId,
     decimal PriceUsd,
-    DateTimeOffset RecordedAt
+    DateTime RecordedAt
 )
 {
     public static PriceHistoryDto From(PriceHistory history) =>

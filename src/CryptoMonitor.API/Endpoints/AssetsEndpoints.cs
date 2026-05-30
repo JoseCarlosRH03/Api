@@ -38,8 +38,8 @@ public static class AssetsEndpoints
 
     private static async Task<Ok<IReadOnlyList<PriceHistoryDto>>> GetAssetHistory(
         string id,
-        [FromQuery, Description("Start date in ISO 8601 format. Example: 2026-05-01T00:00:00Z")] DateTimeOffset? from,
-        [FromQuery, Description("End date in ISO 8601 format. Example: 2026-05-30T23:59:59Z")] DateTimeOffset? to,
+        [FromQuery, Description("Start date in UTC. Example: 2026-05-01T00:00:00")] DateTime? from,
+        [FromQuery, Description("End date in UTC. Example: 2026-05-30T23:59:59")] DateTime? to,
         IMediator mediator,
         CancellationToken cancellationToken
     )

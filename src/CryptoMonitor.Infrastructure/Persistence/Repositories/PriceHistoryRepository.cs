@@ -1,5 +1,6 @@
 using CryptoMonitor.Domain.Entities;
 using CryptoMonitor.Domain.Interfaces;
+using Dapper;
 using Microsoft.EntityFrameworkCore;
 
 namespace CryptoMonitor.Infrastructure.Persistence.Repositories;
@@ -14,43 +15,43 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
 
     public async Task<IReadOnlyList<PriceHistory>> GetByAssetIdAsync(
         string assetId,
-        DateTimeOffset? from,
-        DateTimeOffset? to,
-        CancellationToken cancellationToken = default
-    )
+        DateTime? from,
+        DateTime? to,
+        CancellationToken cancellationToken = default)
     {
-        // EF Core + SQLite cannot translate DateTimeOffset in WHERE or ORDER BY — all filtering is client-side
-        var records = await context.PriceHistories
+        var query = context.PriceHistories
             .AsNoTracking()
-            .Where(p => p.AssetId == assetId)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .Where(p => p.AssetId == assetId);
 
-        var query = records.AsEnumerable();
         if (from.HasValue) query = query.Where(p => p.RecordedAt >= from.Value);
-        if (to.HasValue) query = query.Where(p => p.RecordedAt <= to.Value);
-        return query.OrderBy(p => p.RecordedAt).ToList();
+        if (to.HasValue)   query = query.Where(p => p.RecordedAt <= to.Value);
+
+        return await query.OrderBy(p => p.RecordedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<decimal?> GetBasePriceAsync(
-        string assetId,
+    public async Task<IReadOnlyDictionary<string, decimal>> GetBasePricesAsync(
         int windowHours,
         CancellationToken cancellationToken = default)
     {
-        var windowStart = DateTimeOffset.UtcNow.AddHours(-windowHours);
+        var windowStart = DateTime.UtcNow.AddHours(-windowHours);
 
-        // EF Core + SQLite cannot translate DateTimeOffset in WHERE or ORDER BY — all filtering is client-side
-        var records = await context.PriceHistories
-            .AsNoTracking()
-            .Where(p => p.AssetId == assetId)
-            .Select(p => new { p.PriceUsd, p.RecordedAt })
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        const string sql = """
+            SELECT ph.AssetId, ph.PriceUsd
+            FROM PriceHistories ph
+            INNER JOIN (
+                SELECT AssetId, MIN(RecordedAt) AS MinRecordedAt
+                FROM PriceHistories
+                WHERE RecordedAt >= @windowStart
+                GROUP BY AssetId
+            ) first_prices
+                ON ph.AssetId = first_prices.AssetId
+               AND ph.RecordedAt = first_prices.MinRecordedAt
+            """;
 
-        return records
-            .Where(r => r.RecordedAt >= windowStart)
-            .OrderBy(r => r.RecordedAt)
-            .Select(r => (decimal?)r.PriceUsd)
-            .FirstOrDefault();
+        var connection = context.Database.GetDbConnection();
+        var rows = await connection.QueryAsync<(string AssetId, decimal PriceUsd)>(
+            sql, new { windowStart }).ConfigureAwait(false);
+
+        return rows.ToDictionary(r => r.AssetId, r => r.PriceUsd);
     }
 }

@@ -20,25 +20,23 @@ internal sealed class AlertDetectionService(
     {
         var effectiveWindow = windowHours ?? _options.WindowHours;
         var assets = await assetRepository.GetAllAsync(cancellationToken);
+        var basePrices = await priceHistoryRepository.GetBasePricesAsync(effectiveWindow, cancellationToken);
         var alerts = new List<AlertDto>();
 
         foreach (var asset in assets)
         {
-            var basePrice = await priceHistoryRepository.GetBasePriceAsync(
-                asset.Id, effectiveWindow, cancellationToken);
-
-            if (basePrice is null || basePrice == 0)
+            if (!basePrices.TryGetValue(asset.Id, out var basePrice) || basePrice == 0)
             {
-                logger.LogDebug("No base price available for {AssetId} in the last {WindowHours}h — skipping", asset.Id, effectiveWindow);
+                logger.LogDebug("No base price for {AssetId} in {WindowHours}h — skipping", asset.Id, effectiveWindow);
                 continue;
             }
 
-            var variation = (double)((asset.PriceUsd - basePrice.Value) / basePrice.Value * 100);
+            var variation = (double)((asset.PriceUsd - basePrice) / basePrice * 100);
 
             if (Math.Abs(variation) >= _options.ThresholdPercent)
             {
-                logger.LogInformation("Alert detected for {AssetId}: {VariationPercent:F2}% variation in {WindowHours}h", asset.Id, variation, effectiveWindow);
-                alerts.Add(new AlertDto(asset.Id, asset.Symbol, asset.PriceUsd, basePrice.Value, variation));
+                logger.LogInformation("Alert detected for {AssetId}: {VariationPercent:F2}% in {WindowHours}h", asset.Id, variation, effectiveWindow);
+                alerts.Add(new AlertDto(asset.Id, asset.Symbol, asset.PriceUsd, basePrice, variation));
             }
         }
 

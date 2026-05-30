@@ -19,7 +19,7 @@ internal sealed class SyncAssetsCommandHandler(
 
         await assetRepository.UpsertRangeAsync(assets, cancellationToken);
 
-        var syncedAt = DateTimeOffset.UtcNow;
+        var syncedAt = DateTime.UtcNow;
         var priceRecords = assets.Select(a => new PriceHistory
         {
             AssetId = a.Id,

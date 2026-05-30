@@ -6,10 +6,10 @@ public interface IPriceHistoryRepository
 {
     Task AddRangeAsync(IEnumerable<PriceHistory> records, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PriceHistory>> GetByAssetIdAsync(
-        string assetId, 
-        DateTimeOffset? from, 
-        DateTimeOffset? to, 
+        string assetId,
+        DateTime? from,
+        DateTime? to,
         CancellationToken cancellationToken = default
     );
-    Task<decimal?> GetBasePriceAsync(string assetId, int windowHours, CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<string, decimal>> GetBasePricesAsync(int windowHours, CancellationToken cancellationToken = default);
 }
