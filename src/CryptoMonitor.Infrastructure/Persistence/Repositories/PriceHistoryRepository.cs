@@ -19,17 +19,17 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
         CancellationToken cancellationToken = default
     )
     {
-        // WHERE filters pushed to SQL; ORDER BY on DateTimeOffset stays client-side
-        // (EF Core + SQLite cannot translate DateTimeOffset in ORDER BY clauses)
-        var query = context.PriceHistories
+        // EF Core + SQLite cannot translate DateTimeOffset in WHERE or ORDER BY — all filtering is client-side
+        var records = await context.PriceHistories
             .AsNoTracking()
-            .Where(p => p.AssetId == assetId);
+            .Where(p => p.AssetId == assetId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
+        var query = records.AsEnumerable();
         if (from.HasValue) query = query.Where(p => p.RecordedAt >= from.Value);
         if (to.HasValue) query = query.Where(p => p.RecordedAt <= to.Value);
-
-        var records = await query.ToListAsync(cancellationToken).ConfigureAwait(false);
-        return records.OrderBy(p => p.RecordedAt).ToList();
+        return query.OrderBy(p => p.RecordedAt).ToList();
     }
 
     public async Task<decimal?> GetBasePriceAsync(
@@ -39,15 +39,16 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
     {
         var windowStart = DateTimeOffset.UtcNow.AddHours(-windowHours);
 
-        // WHERE filter pushed to SQL; ORDER BY stays client-side (SQLite DateTimeOffset limitation)
+        // EF Core + SQLite cannot translate DateTimeOffset in WHERE or ORDER BY — all filtering is client-side
         var records = await context.PriceHistories
             .AsNoTracking()
-            .Where(p => p.AssetId == assetId && p.RecordedAt >= windowStart)
+            .Where(p => p.AssetId == assetId)
             .Select(p => new { p.PriceUsd, p.RecordedAt })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return records
+            .Where(r => r.RecordedAt >= windowStart)
             .OrderBy(r => r.RecordedAt)
             .Select(r => (decimal?)r.PriceUsd)
             .FirstOrDefault();

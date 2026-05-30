@@ -26,13 +26,15 @@ internal sealed class ApiKeyMiddleware(
             || providedKey != options.Value.ApiKey)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            context.Response.ContentType = "application/problem+json";
-            await context.Response.WriteAsJsonAsync(new ProblemDetails
-            {
-                Status = StatusCodes.Status401Unauthorized,
-                Title = "Unauthorized",
-                Detail = "A valid API key must be provided in the X-Api-Key header."
-            });
+            await context.Response.WriteAsJsonAsync(
+                new ProblemDetails
+                {
+                    Status = StatusCodes.Status401Unauthorized,
+                    Title = "Unauthorized",
+                    Detail = "A valid API key must be provided in the X-Api-Key header."
+                },
+                options: null,
+                contentType: "application/problem+json");
             return;
         }
 

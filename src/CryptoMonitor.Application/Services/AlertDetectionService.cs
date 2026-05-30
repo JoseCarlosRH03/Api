@@ -16,19 +16,20 @@ internal sealed class AlertDetectionService(
 {
     private readonly PriceAlertOptions _options = options.Value;
 
-    public async Task<IReadOnlyList<AlertDto>> DetectAlertsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<AlertDto>> DetectAlertsAsync(int? windowHours = null, CancellationToken cancellationToken = default)
     {
+        var effectiveWindow = windowHours ?? _options.WindowHours;
         var assets = await assetRepository.GetAllAsync(cancellationToken);
         var alerts = new List<AlertDto>();
 
         foreach (var asset in assets)
         {
             var basePrice = await priceHistoryRepository.GetBasePriceAsync(
-                asset.Id, _options.WindowHours, cancellationToken);
+                asset.Id, effectiveWindow, cancellationToken);
 
             if (basePrice is null || basePrice == 0)
             {
-                logger.LogDebug("No base price available for {AssetId} in the last {WindowHours}h — skipping", asset.Id, _options.WindowHours);
+                logger.LogDebug("No base price available for {AssetId} in the last {WindowHours}h — skipping", asset.Id, effectiveWindow);
                 continue;
             }
 
@@ -36,12 +37,12 @@ internal sealed class AlertDetectionService(
 
             if (Math.Abs(variation) >= _options.ThresholdPercent)
             {
-                logger.LogInformation("Alert detected for {AssetId}: {VariationPercent:F2}% variation in {WindowHours}h", asset.Id, variation, _options.WindowHours);
+                logger.LogInformation("Alert detected for {AssetId}: {VariationPercent:F2}% variation in {WindowHours}h", asset.Id, variation, effectiveWindow);
                 alerts.Add(new AlertDto(asset.Id, asset.Symbol, asset.PriceUsd, basePrice.Value, variation));
             }
         }
 
-        logger.LogDebug("Alert detection complete: {AlertCount} alert(s) from {AssetCount} asset(s)", alerts.Count, assets.Count);
+        logger.LogDebug("Alert detection complete: {AlertCount} alert(s) from {AssetCount} asset(s) in {WindowHours}h window", alerts.Count, assets.Count, effectiveWindow);
         return alerts;
     }
 }
