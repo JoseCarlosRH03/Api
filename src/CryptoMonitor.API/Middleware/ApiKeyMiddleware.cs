@@ -11,8 +11,17 @@ internal sealed class ApiKeyMiddleware(
 {
     private const string ApiKeyHeader = "X-Api-Key";
 
+    private static readonly string[] PublicPrefixes = ["/scalar", "/openapi"];
+
     public async Task InvokeAsync(HttpContext context)
     {
+        var path = context.Request.Path;
+        if (PublicPrefixes.Any(p => path.StartsWithSegments(p)))
+        {
+            await next(context);
+            return;
+        }
+
         if (!context.Request.Headers.TryGetValue(ApiKeyHeader, out var providedKey)
             || providedKey != options.Value.ApiKey)
         {
