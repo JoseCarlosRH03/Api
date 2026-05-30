@@ -1,3 +1,4 @@
+using System.Data;
 using CryptoMonitor.Domain.Entities;
 using CryptoMonitor.Domain.Interfaces;
 using Dapper;
@@ -49,8 +50,11 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
             """;
 
         var connection = context.Database.GetDbConnection();
-        var rows = await connection.QueryAsync<(string AssetId, decimal PriceUsd)>(
-            sql, new { windowStart }).ConfigureAwait(false);
+        if (connection.State != ConnectionState.Open)
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+        var command = new CommandDefinition(sql, new { windowStart }, cancellationToken: cancellationToken);
+        var rows = await connection.QueryAsync<(string AssetId, decimal PriceUsd)>(command).ConfigureAwait(false);
 
         return rows.ToDictionary(r => r.AssetId, r => r.PriceUsd);
     }
