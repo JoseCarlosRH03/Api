@@ -46,6 +46,7 @@ try
 
     var api = app.MapGroup("/api/v1");
     api.MapGroup("/assets").MapAssetsEndpoints();
+    api.MapGroup("/sync").MapSyncEndpoints();
 
     app.Run();
 }
