@@ -17,12 +17,16 @@ public static class AssetsEndpoints
         return group;
     }
 
-    private static async Task<Ok<IReadOnlyList<AssetDto>>> GetAllAssets(
+    private static async Task<Ok<PagedResult<AssetDto>>> GetAllAssets(
+        [FromQuery, Description("Page number (1-based). Default: 1.")] int page,
+        [FromQuery, Description("Items per page. Default: 50.")] int pageSize,
         IMediator mediator,
         CancellationToken cancellationToken
     )
     {
-        var assets = await mediator.Send(new GetAssetsQuery(), cancellationToken);
+        page = page <= 0 ? 1 : page;
+        pageSize = pageSize <= 0 ? 50 : Math.Min(pageSize, 200);
+        var assets = await mediator.Send(new GetAssetsQuery(page, pageSize), cancellationToken);
         return TypedResults.Ok(assets);
     }
 
@@ -36,15 +40,19 @@ public static class AssetsEndpoints
         return TypedResults.Ok(asset);
     }
 
-    private static async Task<Ok<IReadOnlyList<PriceHistoryDto>>> GetAssetHistory(
+    private static async Task<Ok<PagedResult<PriceHistoryDto>>> GetAssetHistory(
         string id,
         [FromQuery, Description("Start date in UTC. Example: 2026-05-01T00:00:00")] DateTime? from,
         [FromQuery, Description("End date in UTC. Example: 2026-05-30T23:59:59")] DateTime? to,
+        [FromQuery, Description("Page number (1-based). Default: 1.")] int page,
+        [FromQuery, Description("Items per page. Default: 100.")] int pageSize,
         IMediator mediator,
         CancellationToken cancellationToken
     )
     {
-        var history = await mediator.Send(new GetAssetHistoryQuery(id, from, to), cancellationToken);
+        page = page <= 0 ? 1 : page;
+        pageSize = pageSize <= 0 ? 100 : Math.Min(pageSize, 500);
+        var history = await mediator.Send(new GetAssetHistoryQuery(id, from, to, page, pageSize), cancellationToken);
         return TypedResults.Ok(history);
     }
 }

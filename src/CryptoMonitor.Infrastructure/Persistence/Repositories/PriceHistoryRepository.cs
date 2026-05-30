@@ -14,10 +14,12 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<IReadOnlyList<PriceHistory>> GetByAssetIdAsync(
+    public async Task<(IReadOnlyList<PriceHistory> Items, int TotalCount)> GetPagedByAssetIdAsync(
         string assetId,
         DateTime? from,
         DateTime? to,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken = default)
     {
         var query = context.PriceHistories
@@ -27,7 +29,16 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
         if (from.HasValue) query = query.Where(p => p.RecordedAt >= from.Value);
         if (to.HasValue)   query = query.Where(p => p.RecordedAt <= to.Value);
 
-        return await query.OrderBy(p => p.RecordedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var totalCount = await query.CountAsync(cancellationToken).ConfigureAwait(false);
+
+        var items = await query
+            .OrderBy(p => p.RecordedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return (items, totalCount);
     }
 
     public async Task<IReadOnlyDictionary<string, decimal>> GetBasePricesAsync(
@@ -57,5 +68,13 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
         var rows = await connection.QueryAsync<(string AssetId, decimal PriceUsd)>(command).ConfigureAwait(false);
 
         return rows.ToDictionary(r => r.AssetId, r => r.PriceUsd);
+    }
+
+    public async Task DeleteOlderThanAsync(DateTime cutoff, CancellationToken cancellationToken = default)
+    {
+        await context.PriceHistories
+            .Where(p => p.RecordedAt < cutoff)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
     }
 }

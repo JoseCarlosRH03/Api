@@ -14,6 +14,24 @@ internal sealed class AssetRepository(AppDbContext context) : IAssetRepository
             .ConfigureAwait(false);
     }
 
+    public async Task<(IReadOnlyList<Asset> Items, int TotalCount)> GetPagedAsync(
+        int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var totalCount = await context.Assets
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var items = await context.Assets
+            .AsNoTracking()
+            .OrderBy(a => a.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return (items, totalCount);
+    }
+
     public async Task<Asset?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         return await context.Assets

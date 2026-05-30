@@ -1,7 +1,9 @@
 using CryptoMonitor.Application.DTOs;
+using CryptoMonitor.Application.Options;
 using CryptoMonitor.Domain.Entities;
 using CryptoMonitor.Domain.Interfaces;
 using MediatR;
+using Microsoft.Extensions.Options;
 
 namespace CryptoMonitor.Application.Assets.Commands;
 
@@ -10,7 +12,8 @@ public sealed record SyncAssetsCommand : IRequest<SyncResultDto>;
 internal sealed class SyncAssetsCommandHandler(
     ICoinCapApiClient coinCapClient,
     IAssetRepository assetRepository,
-    IPriceHistoryRepository priceHistoryRepository)
+    IPriceHistoryRepository priceHistoryRepository,
+    IOptions<PriceAlertOptions> options)
     : IRequestHandler<SyncAssetsCommand, SyncResultDto>
 {
     public async Task<SyncResultDto> Handle(SyncAssetsCommand request, CancellationToken cancellationToken)
@@ -29,6 +32,12 @@ internal sealed class SyncAssetsCommandHandler(
 
         await priceHistoryRepository.AddRangeAsync(priceRecords, cancellationToken);
 
-        return new SyncResultDto(assets.Count, syncedAt);
+        if (options.Value.RetentionDays > 0)
+        {
+            var cutoff = syncedAt.AddDays(-options.Value.RetentionDays);
+            await priceHistoryRepository.DeleteOlderThanAsync(cutoff, cancellationToken);
+        }
+
+        return new SyncResultDto(assets.Count, new DateTimeOffset(syncedAt, TimeSpan.Zero));
     }
 }
