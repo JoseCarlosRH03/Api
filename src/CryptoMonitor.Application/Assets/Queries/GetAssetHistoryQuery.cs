@@ -7,8 +7,8 @@ namespace CryptoMonitor.Application.Assets.Queries;
 
 public sealed record GetAssetHistoryQuery(
     string AssetId,
-    DateTimeOffset? From,
-    DateTimeOffset? To) : IRequest<IReadOnlyList<PriceHistoryDto>>;
+    DateTime? From,
+    DateTime? To) : IRequest<IReadOnlyList<PriceHistoryDto>>;
 
 internal sealed class GetAssetHistoryQueryHandler(
     IAssetRepository assetRepository,

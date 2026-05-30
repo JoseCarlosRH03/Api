@@ -14,7 +14,7 @@ namespace CryptoMonitor.Infrastructure.Migrations
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
-
+#pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.8");
 
             modelBuilder.Entity("CryptoMonitor.Domain.Entities.Asset", b =>
@@ -72,7 +72,7 @@ namespace CryptoMonitor.Infrastructure.Migrations
                         .HasPrecision(28, 10)
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("RecordedAt")
+                    b.Property<DateTime>("RecordedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -92,7 +92,7 @@ namespace CryptoMonitor.Infrastructure.Migrations
 
                     b.Navigation("Asset");
                 });
-
+#pragma warning restore 612, 618
         }
     }
 }
