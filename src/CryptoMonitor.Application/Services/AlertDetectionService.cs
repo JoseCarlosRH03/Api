@@ -1,6 +1,7 @@
 using CryptoMonitor.Application.DTOs;
 using CryptoMonitor.Application.Interfaces;
 using CryptoMonitor.Application.Options;
+using CryptoMonitor.Application.Telemetry;
 using CryptoMonitor.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,7 +12,8 @@ internal sealed class AlertDetectionService(
     IAssetRepository assetRepository,
     IPriceHistoryRepository priceHistoryRepository,
     IOptions<PriceAlertOptions> options,
-    ILogger<AlertDetectionService> logger)
+    ILogger<AlertDetectionService> logger,
+    ICryptoMonitorMetrics metrics)
     : IAlertDetectionService
 {
     private readonly PriceAlertOptions _options = options.Value;
@@ -40,6 +42,7 @@ internal sealed class AlertDetectionService(
             }
         }
 
+        metrics.RecordAlertsDetected(alerts.Count);
         logger.LogDebug("Alert detection complete: {AlertCount} alert(s) from {AssetCount} asset(s) in {WindowHours}h window", alerts.Count, assets.Count, effectiveWindow);
         return alerts;
     }

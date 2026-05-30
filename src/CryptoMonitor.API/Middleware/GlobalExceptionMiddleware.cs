@@ -1,4 +1,5 @@
 using CryptoMonitor.Domain.Exceptions;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CryptoMonitor.API.Middleware;
@@ -17,7 +18,7 @@ internal sealed class GlobalExceptionMiddleware(
         }
         catch (Exception ex)
         {
-            var logLevel = ex is AssetNotFoundException or HttpRequestException
+            var logLevel = ex is AssetNotFoundException or HttpRequestException or ValidationException
                 ? LogLevel.Warning
                 : LogLevel.Error;
 
@@ -30,6 +31,24 @@ internal sealed class GlobalExceptionMiddleware(
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
+        if (exception is ValidationException validationEx)
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            var errors = validationEx.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(e => e.ErrorMessage).ToArray());
+            var problem = new ValidationProblemDetails(errors)
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Validation failed",
+                Instance = context.Request.Path
+            };
+            await context.Response.WriteAsJsonAsync(problem, options: null, contentType: "application/problem+json");
+            return;
+        }
+
         var (statusCode, title) = exception switch
         {
             AssetNotFoundException => (StatusCodes.Status404NotFound, "Asset not found"),

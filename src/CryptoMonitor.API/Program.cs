@@ -1,9 +1,11 @@
 using CryptoMonitor.API.Endpoints;
 using CryptoMonitor.API.Middleware;
 using CryptoMonitor.Application;
+using CryptoMonitor.Application.Telemetry;
 using CryptoMonitor.Infrastructure;
 using CryptoMonitor.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Metrics;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -24,6 +26,13 @@ try
     builder.Services.AddApplicationServices(builder.Configuration);
     builder.Services.AddInfrastructureServices(builder.Configuration);
 
+    builder.Services.AddOpenTelemetry()
+        .WithMetrics(m => m
+            .AddMeter(CryptoMonitorMetrics.MeterName)
+            .AddMeter("Microsoft.AspNetCore.Hosting")
+            .AddMeter("System.Net.Http")
+            .AddPrometheusExporter());
+
     builder.Services.AddOpenApi();
     builder.Services.AddProblemDetails();
 
@@ -42,6 +51,8 @@ try
     app.UseMiddleware<ApiKeyMiddleware>();
     app.UseStatusCodePages();
     app.UseSerilogRequestLogging();
+
+    app.MapPrometheusScrapingEndpoint();
 
     if (app.Environment.IsDevelopment())
     {

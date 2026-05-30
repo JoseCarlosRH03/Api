@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using CryptoMonitor.Application.DTOs;
 using CryptoMonitor.Application.Options;
+using CryptoMonitor.Application.Telemetry;
 using CryptoMonitor.Domain.Entities;
 using CryptoMonitor.Domain.Interfaces;
 using MediatR;
@@ -13,31 +15,42 @@ internal sealed class SyncAssetsCommandHandler(
     ICoinCapApiClient coinCapClient,
     IAssetRepository assetRepository,
     IPriceHistoryRepository priceHistoryRepository,
-    IOptions<PriceAlertOptions> options)
+    IOptions<PriceAlertOptions> options,
+    ICryptoMonitorMetrics metrics)
     : IRequestHandler<SyncAssetsCommand, SyncResultDto>
 {
     public async Task<SyncResultDto> Handle(SyncAssetsCommand request, CancellationToken cancellationToken)
     {
-        var assets = await coinCapClient.GetAssetsAsync(cancellationToken);
-
-        await assetRepository.UpsertRangeAsync(assets, cancellationToken);
-
-        var syncedAt = DateTime.UtcNow;
-        var priceRecords = assets.Select(a => new PriceHistory
+        var sw = Stopwatch.StartNew();
+        try
         {
-            AssetId = a.Id,
-            PriceUsd = a.PriceUsd,
-            RecordedAt = syncedAt,
-        });
+            var assets = await coinCapClient.GetAssetsAsync(cancellationToken);
 
-        await priceHistoryRepository.AddRangeAsync(priceRecords, cancellationToken);
+            await assetRepository.UpsertRangeAsync(assets, cancellationToken);
 
-        if (options.Value.RetentionDays > 0)
-        {
-            var cutoff = syncedAt.AddDays(-options.Value.RetentionDays);
-            await priceHistoryRepository.DeleteOlderThanAsync(cutoff, cancellationToken);
+            var syncedAt = DateTime.UtcNow;
+            var priceRecords = assets.Select(a => new PriceHistory
+            {
+                AssetId = a.Id,
+                PriceUsd = a.PriceUsd,
+                RecordedAt = syncedAt,
+            });
+
+            await priceHistoryRepository.AddRangeAsync(priceRecords, cancellationToken);
+
+            if (options.Value.RetentionDays > 0)
+            {
+                var cutoff = syncedAt.AddDays(-options.Value.RetentionDays);
+                await priceHistoryRepository.DeleteOlderThanAsync(cutoff, cancellationToken);
+            }
+
+            metrics.RecordSync(assets.Count, sw.Elapsed.TotalMilliseconds);
+            return new SyncResultDto(assets.Count, new DateTimeOffset(syncedAt, TimeSpan.Zero));
         }
-
-        return new SyncResultDto(assets.Count, new DateTimeOffset(syncedAt, TimeSpan.Zero));
+        catch (Exception)
+        {
+            metrics.RecordSyncError();
+            throw;
+        }
     }
 }

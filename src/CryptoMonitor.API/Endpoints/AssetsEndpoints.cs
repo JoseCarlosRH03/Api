@@ -18,10 +18,10 @@ public static class AssetsEndpoints
     }
 
     private static async Task<Ok<PagedResult<AssetDto>>> GetAllAssets(
-        [FromQuery, Description("Page number (1-based). Default: 1.")] int page,
-        [FromQuery, Description("Items per page. Default: 50.")] int pageSize,
         IMediator mediator,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken,
+        [FromQuery, Description("Page number (1-based).")] int page = 1,
+        [FromQuery, Description("Items per page. Max 200.")] int pageSize = 50
     )
     {
         page = page <= 0 ? 1 : page;
@@ -42,12 +42,12 @@ public static class AssetsEndpoints
 
     private static async Task<Ok<PagedResult<PriceHistoryDto>>> GetAssetHistory(
         string id,
-        [FromQuery, Description("Start date in UTC. Example: 2026-05-01T00:00:00")] DateTime? from,
-        [FromQuery, Description("End date in UTC. Example: 2026-05-30T23:59:59")] DateTime? to,
-        [FromQuery, Description("Page number (1-based). Default: 1.")] int page,
-        [FromQuery, Description("Items per page. Default: 100.")] int pageSize,
         IMediator mediator,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken,
+        [FromQuery, Description("Start date in UTC. Example: 2026-05-01T00:00:00")] DateTime? from = null,
+        [FromQuery, Description("End date in UTC. Example: 2026-05-30T23:59:59")] DateTime? to = null,
+        [FromQuery, Description("Page number (1-based).")] int page = 1,
+        [FromQuery, Description("Items per page. Max 500.")] int pageSize = 100
     )
     {
         page = page <= 0 ? 1 : page;

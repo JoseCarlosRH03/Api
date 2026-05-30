@@ -11,7 +11,7 @@ internal sealed class ApiKeyMiddleware(
 {
     private const string ApiKeyHeader = "X-Api-Key";
 
-    private static readonly string[] PublicPrefixes = ["/scalar", "/openapi"];
+    private static readonly string[] PublicPrefixes = ["/scalar", "/openapi", "/metrics"];
 
     public async Task InvokeAsync(HttpContext context)
     {
