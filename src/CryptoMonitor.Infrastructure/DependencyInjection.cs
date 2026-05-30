@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Polly;
 
 namespace CryptoMonitor.Infrastructure;
 
@@ -32,7 +33,20 @@ public static class DependencyInjection
             client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + '/');
         })
         .AddHttpMessageHandler<CoinCapAuthHandler>()
-        .AddStandardResilienceHandler();
+        .AddStandardResilienceHandler(options =>
+        {
+            options.Retry.MaxRetryAttempts = 3;
+            options.Retry.BackoffType = DelayBackoffType.Exponential;
+            options.Retry.Delay = TimeSpan.FromSeconds(1);
+
+            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
+            options.CircuitBreaker.MinimumThroughput = 5;
+            options.CircuitBreaker.FailureRatio = 0.5;
+            options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(30);
+
+            options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(10);
+            options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(60);
+        });
 
         services.AddHostedService<CoinCapSyncBackgroundService>();
 
