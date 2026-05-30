@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CryptoMonitor.API/CryptoMonitor.API.csproj" />
+    <Project Path="src/CryptoMonitor.Application/CryptoMonitor.Application.csproj" />
+    <Project Path="src/CryptoMonitor.Domain/CryptoMonitor.Domain.csproj" />
+    <Project Path="src/CryptoMonitor.Infrastructure/CryptoMonitor.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CryptoMonitor.E2ETests/CryptoMonitor.E2ETests.csproj" />
+    <Project Path="tests/CryptoMonitor.IntegrationTests/CryptoMonitor.IntegrationTests.csproj" />
+    <Project Path="tests/CryptoMonitor.UnitTests/CryptoMonitor.UnitTests.csproj" />
+  </Folder>
+</Solution>

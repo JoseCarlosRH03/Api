@@ -1,0 +1,27 @@
+# Build outputs
+bin/
+obj/
+
+# SQLite databases
+*.db
+*.db-shm
+*.db-wal
+
+# Sensitive config (API keys go here, never in repo)
+appsettings.Development.json
+appsettings.Production.json
+
+# User-specific
+.vs/
+*.user
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test results
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
