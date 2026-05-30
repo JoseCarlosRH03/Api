@@ -1,4 +1,5 @@
 using CryptoMonitor.API.Endpoints;
+using CryptoMonitor.API.Middleware;
 using CryptoMonitor.Application;
 using CryptoMonitor.Infrastructure;
 using CryptoMonitor.Infrastructure.Persistence;
@@ -34,7 +35,7 @@ try
         db.Database.Migrate();
     }
 
-    app.UseExceptionHandler();
+    app.UseMiddleware<GlobalExceptionMiddleware>();
     app.UseStatusCodePages();
     app.UseSerilogRequestLogging();
 
