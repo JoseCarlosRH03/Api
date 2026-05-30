@@ -36,6 +36,7 @@ try
     }
 
     app.UseMiddleware<GlobalExceptionMiddleware>();
+    app.UseMiddleware<ApiKeyMiddleware>();
     app.UseStatusCodePages();
     app.UseSerilogRequestLogging();
 

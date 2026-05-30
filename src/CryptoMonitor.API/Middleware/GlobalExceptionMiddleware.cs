@@ -6,7 +6,8 @@ namespace CryptoMonitor.API.Middleware;
 internal sealed class GlobalExceptionMiddleware(
     RequestDelegate next,
     IProblemDetailsService problemDetailsService,
-    ILogger<GlobalExceptionMiddleware> logger)
+    ILogger<GlobalExceptionMiddleware> logger
+)
 {
     public async Task InvokeAsync(HttpContext context)
     {
