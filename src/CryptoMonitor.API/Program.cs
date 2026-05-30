@@ -32,7 +32,10 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Database.Migrate();
+        if (db.Database.IsRelational())
+            db.Database.Migrate();
+        else
+            db.Database.EnsureCreated();
     }
 
     app.UseMiddleware<GlobalExceptionMiddleware>();
@@ -61,3 +64,5 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+public partial class Program { }

@@ -19,20 +19,17 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
         CancellationToken cancellationToken = default
     )
     {
-        var query = context.PriceHistories
+        var records = await context.PriceHistories
             .AsNoTracking()
-            .Where(p => p.AssetId == assetId);
-
-        if (from.HasValue)
-            query = query.Where(p => p.RecordedAt >= from.Value);
-
-        if (to.HasValue)
-            query = query.Where(p => p.RecordedAt <= to.Value);
-
-        return await query
-            .OrderBy(p => p.RecordedAt)
+            .Where(p => p.AssetId == assetId)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        // DateTimeOffset ordering done client-side (SQLite EF Core limitation)
+        var query = records.AsEnumerable();
+        if (from.HasValue) query = query.Where(p => p.RecordedAt >= from.Value);
+        if (to.HasValue) query = query.Where(p => p.RecordedAt <= to.Value);
+        return query.OrderBy(p => p.RecordedAt).ToList();
     }
 
     public async Task<decimal?> GetBasePriceAsync(
@@ -42,12 +39,17 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
     {
         var windowStart = DateTimeOffset.UtcNow.AddHours(-windowHours);
 
-        return await context.PriceHistories
+        var records = await context.PriceHistories
             .AsNoTracking()
-            .Where(p => p.AssetId == assetId && p.RecordedAt >= windowStart)
-            .OrderBy(p => p.RecordedAt)
-            .Select(p => (decimal?)p.PriceUsd)
-            .FirstOrDefaultAsync(cancellationToken)
+            .Where(p => p.AssetId == assetId)
+            .Select(p => new { p.PriceUsd, p.RecordedAt })
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        return records
+            .Where(r => r.RecordedAt >= windowStart)
+            .OrderBy(r => r.RecordedAt)
+            .Select(r => (decimal?)r.PriceUsd)
+            .FirstOrDefault();
     }
 }
