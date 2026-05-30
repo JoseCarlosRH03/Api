@@ -1,7 +1,9 @@
+using System.ComponentModel;
 using CryptoMonitor.Application.Alerts.Queries;
 using CryptoMonitor.Application.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CryptoMonitor.API.Endpoints;
 
@@ -14,10 +16,11 @@ public static class AlertsEndpoints
     }
 
     private static async Task<Ok<IReadOnlyList<AlertDto>>> GetAlerts(
+        [FromQuery, Description("Time window in hours to detect price variation. Defaults to server-configured value (24h).")] int? windowHours,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        var alerts = await mediator.Send(new GetAlertsQuery(), cancellationToken);
+        var alerts = await mediator.Send(new GetAlertsQuery(windowHours), cancellationToken);
         return TypedResults.Ok(alerts);
     }
 }
