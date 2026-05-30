@@ -3,10 +3,11 @@ using System.Net.Http.Json;
 using CryptoMonitor.Domain.Entities;
 using CryptoMonitor.Domain.Interfaces;
 using CryptoMonitor.Infrastructure.CoinCap.Models;
+using Microsoft.Extensions.Logging;
 
 namespace CryptoMonitor.Infrastructure.CoinCap;
 
-internal sealed class CoinCapApiClient(HttpClient httpClient) : ICoinCapApiClient
+internal sealed class CoinCapApiClient(HttpClient httpClient, ILogger<CoinCapApiClient> logger) : ICoinCapApiClient
 {
     public async Task<IReadOnlyList<Asset>> GetAssetsAsync(CancellationToken cancellationToken = default)
     {
@@ -23,21 +24,26 @@ internal sealed class CoinCapApiClient(HttpClient httpClient) : ICoinCapApiClien
             .ToList();
     }
 
-    private static Asset MapToAsset(CoinCapAssetDto dto) => new()
+    private Asset MapToAsset(CoinCapAssetDto dto) => new()
     {
         Id = dto.Id,
         Symbol = dto.Symbol,
         Name = dto.Name,
-        PriceUsd = ParseDecimal(dto.PriceUsd),
+        PriceUsd = ParseDecimal(dto.Id, nameof(dto.PriceUsd), dto.PriceUsd),
         MarketCapUsd = ParseDecimalOrNull(dto.MarketCapUsd),
         VolumeUsd24Hr = ParseDecimalOrNull(dto.VolumeUsd24Hr),
         ChangePercent24Hr = ParseDecimalOrNull(dto.ChangePercent24Hr),
         UpdatedAt = DateTimeOffset.UtcNow,
     };
 
-    private static decimal ParseDecimal(string? value) =>
-        decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)
-            ? result : 0m;
+    private decimal ParseDecimal(string assetId, string field, string? value)
+    {
+        if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result))
+            return result;
+
+        logger.LogWarning("Failed to parse {Field} for asset {AssetId}: value was '{Value}' — defaulting to 0", field, assetId, value);
+        return 0m;
+    }
 
     private static decimal? ParseDecimalOrNull(string? value) =>
         decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)

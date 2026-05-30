@@ -19,17 +19,17 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
         CancellationToken cancellationToken = default
     )
     {
-        var records = await context.PriceHistories
+        // WHERE filters pushed to SQL; ORDER BY on DateTimeOffset stays client-side
+        // (EF Core + SQLite cannot translate DateTimeOffset in ORDER BY clauses)
+        var query = context.PriceHistories
             .AsNoTracking()
-            .Where(p => p.AssetId == assetId)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .Where(p => p.AssetId == assetId);
 
-        // DateTimeOffset ordering done client-side (SQLite EF Core limitation)
-        var query = records.AsEnumerable();
         if (from.HasValue) query = query.Where(p => p.RecordedAt >= from.Value);
         if (to.HasValue) query = query.Where(p => p.RecordedAt <= to.Value);
-        return query.OrderBy(p => p.RecordedAt).ToList();
+
+        var records = await query.ToListAsync(cancellationToken).ConfigureAwait(false);
+        return records.OrderBy(p => p.RecordedAt).ToList();
     }
 
     public async Task<decimal?> GetBasePriceAsync(
@@ -39,15 +39,15 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
     {
         var windowStart = DateTimeOffset.UtcNow.AddHours(-windowHours);
 
+        // WHERE filter pushed to SQL; ORDER BY stays client-side (SQLite DateTimeOffset limitation)
         var records = await context.PriceHistories
             .AsNoTracking()
-            .Where(p => p.AssetId == assetId)
+            .Where(p => p.AssetId == assetId && p.RecordedAt >= windowStart)
             .Select(p => new { p.PriceUsd, p.RecordedAt })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return records
-            .Where(r => r.RecordedAt >= windowStart)
             .OrderBy(r => r.RecordedAt)
             .Select(r => (decimal?)r.PriceUsd)
             .FirstOrDefault();
