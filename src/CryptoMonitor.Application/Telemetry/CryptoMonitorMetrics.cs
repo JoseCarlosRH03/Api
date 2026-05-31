@@ -11,6 +11,7 @@ public sealed class CryptoMonitorMetrics : ICryptoMonitorMetrics, IDisposable
     private readonly Histogram<double> _syncDuration;
     private readonly Counter<long> _syncErrors;
     private readonly Counter<long> _alertsDetected;
+    private readonly Histogram<double> _startupGap;
 
     public CryptoMonitorMetrics(IMeterFactory meterFactory)
     {
@@ -35,6 +36,11 @@ public sealed class CryptoMonitorMetrics : ICryptoMonitorMetrics, IDisposable
             "crypto_monitor.alerts.detected",
             unit: "{alerts}",
             description: "Number of price alerts detected per query.");
+
+        _startupGap = _meter.CreateHistogram<double>(
+            "crypto_monitor.startup.gap",
+            unit: "min",
+            description: "Minutes of price history gap detected at service startup due to downtime.");
     }
 
     public void RecordSync(int assetCount, double durationMs)
@@ -46,6 +52,8 @@ public sealed class CryptoMonitorMetrics : ICryptoMonitorMetrics, IDisposable
     public void RecordSyncError() => _syncErrors.Add(1);
 
     public void RecordAlertsDetected(int alertCount) => _alertsDetected.Add(alertCount);
+
+    public void RecordStartupGap(double gapMinutes) => _startupGap.Record(gapMinutes);
 
     public void Dispose() => _meter.Dispose();
 }

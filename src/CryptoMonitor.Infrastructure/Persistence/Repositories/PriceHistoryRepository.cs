@@ -83,4 +83,12 @@ internal sealed class PriceHistoryRepository(AppDbContext context) : IPriceHisto
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    public async Task<DateTime?> GetLastSyncTimeAsync(CancellationToken cancellationToken = default)
+    {
+        // Cast to nullable so EF Core returns null on empty table instead of throwing
+        return await context.PriceHistories
+            .MaxAsync(p => (DateTime?)p.RecordedAt, cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

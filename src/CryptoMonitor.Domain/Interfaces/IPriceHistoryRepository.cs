@@ -14,4 +14,5 @@ public interface IPriceHistoryRepository
         CancellationToken cancellationToken = default);
     Task<IReadOnlyDictionary<string, decimal>> GetBasePricesAsync(int windowHours, CancellationToken cancellationToken = default);
     Task DeleteOlderThanAsync(DateTime cutoff, CancellationToken cancellationToken = default);
+    Task<DateTime?> GetLastSyncTimeAsync(CancellationToken cancellationToken = default);
 }
