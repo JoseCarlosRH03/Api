@@ -70,3 +70,19 @@ Utilizar el siguiente json, este es compartido para facilitar la evaluacion:
   }
 `
 
+## Intruciones de peticiones 
+
+Tomemos como ejemplo la primera url: /api/v1/assets
+
+La ventada que semuestra en la imagen se presenta al selecionar una url y presionar `Test Request`: 
+![alt text](image-1.png)
+
+En el apartado Headers colocamos: 
+  key = X-Api-Key, 
+  value = -ncFxn-0zudMsXcHlIZSGA5sdjSAwWzc_C_ByYw6WaM
+
+Esto se tiene que realizar en cada peicion, en el caso de requerir variables en la url, en el apartado Variables
+les indicara la variable y solo tendran que completar el value de esa variable
+
+Esto de igual forma para los Query Parameters 
+![alt text](image-2.png)
